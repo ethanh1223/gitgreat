@@ -37,7 +37,8 @@ class App extends React.Component {
         {this.props.children && React.cloneElement(this.props.children, {
           featuredEvent: this.state.featuredEvent,
           handleEntryClick: this.handleEntryClick,
-          getEventData: this.getEventData
+          getEventData: this.getEventData,
+          auth: this.props.route.auth
         })}
       </div>
     );
