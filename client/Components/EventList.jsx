@@ -19,33 +19,37 @@ class EventList extends React.Component {
   }
 
   loadData() {
+    if (this.props.user) {
+      var listParam = this.props.user.email
+      $.ajax({
+        method: 'GET',
+        url: '/eventTable?username=' + listParam,
+        success: function(data) {
+          this.setState({eventList: data});
+          var upcoming = [];
+          var completed = [];
+          data.forEach((event) => {
+            var now = new Date();
+            var eventDate = new Date(event.when);
+            eventDate = eventDate.setHours(eventDate.getHours() + 8);
+            if (eventDate >= now) {
+              upcoming.push(event);
+            } else {
+              completed.push(event);
+            }
+          });
+          this.setState({
+            upcoming: upcoming,
+            completed: completed,
+            eventList: data
+          });
+        }.bind(this)
+      });
+    }
+
     //This function will sort the events in the eventList into two categories: upcoming and completed
     //The sort logic compares the event date with the current date and checks to see if the event
     //has already passed.
-    $.ajax({
-      method: 'GET',
-      url: '/eventTable',
-      success: function(data) {
-        this.setState({eventList: data});
-        var upcoming = [];
-        var completed = [];
-        data.forEach((event) => {
-          var now = new Date();
-          var eventDate = new Date(event.when);
-          eventDate = eventDate.setHours(eventDate.getHours() + 8);
-          if (eventDate >= now) {
-            upcoming.push(event);
-          } else {
-            completed.push(event);
-          }
-        });
-        this.setState({
-          upcoming: upcoming,
-          completed: completed,
-          eventList: data
-        });
-      }.bind(this)
-    });
   }
   
   update() {

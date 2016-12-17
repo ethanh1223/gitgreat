@@ -91,27 +91,53 @@ app.post('/eventTable', function(req, res, next) {
 });
 
 app.get('/eventTable', function(req, res, next) {
-  dbModels.EventTable.findAll({order: [['when', 'DESC']], include: [dbModels.LocationTable]})
-  .then(function(events) {
-    var result = [];
-    for (var i = 0; i < events.length; i++) {
-      var formattedEvent = {};
-      var event = events[i].dataValues;
-      var location = event.location.dataValues;
-      formattedEvent.name = event.name;
-      formattedEvent.when = event.when;
-      formattedEvent.location = {
-        label: location.label,
-        address: location.address,
-        latitude: parseFloat(location.latitude),
-        longitude: parseFloat(location.longitude),
-        placeID: location.placeID,
-        categories: JSON.parse(location.categories)
-      }
-      result.push(formattedEvent);
-    }
-    utils.sendResponse(res, 200, 'application/json', result);
-  });
+  var userEmail = url.parse(req.url).query.slice(9)
+  console.log(userEmail)
+
+  dbModels.UsersTable.findOne({where: {email: userEmail}})
+  .then(function(user) {
+    console.log('THIS THE FUKKIN USER', user)
+    dbModels.EventTable.findAll({
+      order: [['when', 'DESC']],
+      include: [
+        {
+          model: dbModels.UsersTable, 
+          through: {
+            where: {id: user.dataValues.id}
+          }
+      }]
+    })
+    .then(function(userEvents) {
+      dbModels.EventTable.findAll({order: [['when', 'DESC']], include: [dbModels.LocationTable]})
+      .then(function(locationEvents) {
+        console.log('USEREVENTS', userEvents)
+        console.log('LOCATIONEVENTS', locationEvents)
+        var result = [];
+        for (var j = 0; j < userEvents.length; j++) {
+          for (var i = 0; i < locationEvents.length; i++) {
+            if (userEvents[j].dataValues.id === locationEvents[i].dataValues.id) {
+              var formattedEvent = {};
+              var event = locationEvents[i].dataValues;
+              var location = event.location.dataValues;
+              formattedEvent.name = event.name;
+              formattedEvent.when = event.when;
+              formattedEvent.location = {
+                label: location.label,
+                address: location.address,
+                latitude: parseFloat(location.latitude),
+                longitude: parseFloat(location.longitude),
+                placeID: location.placeID,
+                categories: JSON.parse(location.categories)
+              }
+              result.push(formattedEvent);
+            }
+          }
+        }
+        console.log('THIS IS THE RESULT', result)
+        res.send(result)
+      });
+    })
+  })
 });
 
 app.delete('/eventTable', function(req, res, next) {
@@ -145,6 +171,7 @@ app.post('/itemList', function(req, res, next) {
 });
 
 app.get('/itemList', function(req, res, next) {
+
   var eventName = url.parse(req.url).query.slice(10).split('_').join(' ');
   dbModels.EventTable.findOne({where: {name: eventName}})
     .then(function(event) {
